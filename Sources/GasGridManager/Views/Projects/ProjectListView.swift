@@ -159,14 +159,31 @@ struct ProjectDetailSheet: View {
                     Form { TextField("Name", text: $name); StyledTextEditor(text: $desc, placeholder: "Project description...", minHeight: 60); Picker("Status", selection: $status) { ForEach(ProjectStatus.allCases) { Text($0.rawValue).tag($0) } } }
                     VStack(alignment: .leading, spacing: 8) { Text("Progress \(Int(progress * 100))%").font(.headline); ProgressView(value: progress).tint(Color(hex: status.colorHex)) }
                     if !projectTasks.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) { Text("Tasks (\(projectTasks.count))").font(.headline)
-                            ForEach(projectTasks) { t in HStack(spacing: Layout.paddingM) { Image(systemName: t.status.icon).foregroundStyle(Color(hex: t.status.colorHex)); Text(t.title).font(.subheadline); Spacer(); Text(t.priority.rawValue).font(.caption).foregroundStyle(Color(hex: t.priority.colorHex)) }.padding(Layout.paddingS).background(.quaternary).clipShape(RoundedRectangle(cornerRadius: Layout.cornerRadiusS)) }
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Tasks (\(projectTasks.count))").font(.headline)
+                            ForEach(projectTasks) { task in
+                                HStack(spacing: Layout.paddingM) {
+                                    Image(systemName: task.status.icon)
+                                        .foregroundStyle(Color(hex: task.status.colorHex))
+                                    Text(task.title).font(.subheadline)
+                                    Spacer()
+                                    Text(task.priority.rawValue)
+                                        .font(.caption)
+                                        .foregroundStyle(Color(hex: task.priority.colorHex))
+                                }
+                                .padding(Layout.paddingS)
+                                .background(.quaternary)
+                                .clipShape(RoundedRectangle(cornerRadius: Layout.cornerRadiusS))
+                            }
                         }
                     }
                 }.padding(Layout.paddingXXL)
             }
         }.frame(minWidth: Layout.minSheetWidthWide, minHeight: Layout.minSheetHeightDetail)
-        .alert("Delete Project?", isPresented: $showDelete) { Button("Cancel", role: .cancel) {}; Button("Delete", role: .destructive) { store.deleteProject(project); dismiss() } }
+        .alert("Delete Project?", isPresented: $showDelete) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) { store.deleteProject(project); dismiss() }
+        }
     }
 
     private func save() { var p = project; p.name = name; p.description = desc.isEmpty ? nil : desc; p.status = status; p.updatedAt = Date(); store.updateProject(p); dismiss() }

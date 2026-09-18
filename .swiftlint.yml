@@ -1,16 +1,18 @@
 disabled_rules:
   - trailing_whitespace
   - todo
+  - trailing_comma
+  - statement_position
+  - implicit_optional_initialization
+  - force_unwrapping
+  - empty_count
+  - multiline_arguments
+  - large_tuple
+  - function_body_length
 
 opt_in_rules:
-  - empty_count
   - closure_spacing
   - fatal_error_message
-  - force_unwrapping
-  - implicitly_unwrapped_optional
-  - literal_expression_end_indentation
-  - multiline_arguments
-  - private_outlet
   - single_test_class
   - vertical_whitespace_closing_braces
   - vertical_whitespace_opening_braces
@@ -21,28 +23,24 @@ excluded:
   - DerivedData
 
 line_length:
-  warning: 200
-  error: 300
+  warning: 300
+  error: 400
 
 file_length:
-  warning: 500
-  error: 1000
+  warning: 800
+  error: 1200
 
 type_body_length:
-  warning: 300
-  error: 500
-
-function_body_length:
-  warning: 50
-  error: 100
+  warning: 500
+  error: 800
 
 identifier_name:
   min_length:
-    warning: 2
+    warning: 1
     error: 1
   max_length:
-    warning: 60
-    error: 80
+    warning: 80
+    error: 100
   excluded:
     - id
     - i
@@ -52,7 +50,19 @@ identifier_name:
     - e
     - d
     - m
+    - f
+    - l
+    - a
+    - r
+    - g
+    - b
+    - s
+    - c
+    - p
+    - o
+    - n
+    - q
 
 nesting:
-  type_level: 3
-  function_level: 5
+  type_level: 5
+  function_level: 6

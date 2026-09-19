@@ -126,7 +126,6 @@ struct NewEmployeeSheet: View {
     @State private var first = ""
     @State private var last = ""
     @State private var email = ""
-    @State private var phone = ""
     @State private var role: EmployeeRole = .technician
     @State private var deptId: UUID?
 
@@ -143,7 +142,7 @@ struct NewEmployeeSheet: View {
             )
             Form {
                 HStack { TextField("First Name", text: $first); TextField("Last Name", text: $last) }
-                HStack { TextField("Email", text: $email); TextField("Phone", text: $phone) }
+                TextField("Email", text: $email)
                 Picker("Role", selection: $role) { ForEach(EmployeeRole.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Department", selection: $deptId) { Text("Unassigned").tag(nil as UUID?); ForEach(store.departments) { Text($0.name).tag($0.id as UUID?) } }
             }.padding(Layout.paddingXXL)
@@ -154,7 +153,6 @@ struct NewEmployeeSheet: View {
         let e = Employee(firstName: first.trimmingCharacters(in: .whitespacesAndNewlines),
                          lastName: last.trimmingCharacters(in: .whitespacesAndNewlines),
                          email: email.trimmingCharacters(in: .whitespacesAndNewlines),
-                         phone: phone.isEmpty ? nil : phone.trimmingCharacters(in: .whitespacesAndNewlines),
                          role: role, departmentId: deptId)
         store.addEmployee(e)
         dismiss()
@@ -168,7 +166,6 @@ struct EditEmployeeSheet: View {
     @State private var first: String
     @State private var last: String
     @State private var email: String
-    @State private var phone: String
     @State private var role: EmployeeRole
     @State private var deptId: UUID?
     @State private var isActive: Bool
@@ -179,7 +176,6 @@ struct EditEmployeeSheet: View {
         _first = State(initialValue: employee.firstName)
         _last = State(initialValue: employee.lastName)
         _email = State(initialValue: employee.email)
-        _phone = State(initialValue: employee.phone ?? "")
         _role = State(initialValue: employee.role)
         _deptId = State(initialValue: employee.departmentId)
         _isActive = State(initialValue: employee.isActive)
@@ -200,7 +196,7 @@ struct EditEmployeeSheet: View {
             )
             Form {
                 HStack { TextField("First Name", text: $first); TextField("Last Name", text: $last) }
-                HStack { TextField("Email", text: $email); TextField("Phone", text: $phone) }
+                TextField("Email", text: $email)
                 Picker("Role", selection: $role) { ForEach(EmployeeRole.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Department", selection: $deptId) { Text("Unassigned").tag(nil as UUID?); ForEach(store.departments) { Text($0.name).tag($0.id as UUID?) } }
                 Toggle("Active", isOn: $isActive)
@@ -217,7 +213,6 @@ struct EditEmployeeSheet: View {
         e.firstName = first.trimmingCharacters(in: .whitespacesAndNewlines)
         e.lastName = last.trimmingCharacters(in: .whitespacesAndNewlines)
         e.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        e.phone = phone.isEmpty ? nil : phone.trimmingCharacters(in: .whitespacesAndNewlines)
         e.role = role; e.departmentId = deptId; e.isActive = isActive; e.updatedAt = Date()
         store.updateEmployee(e)
         dismiss()

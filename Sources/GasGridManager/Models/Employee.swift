@@ -14,20 +14,6 @@ enum EmployeeRole: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    var icon: String {
-        switch self {
-        case .manager: return "person.line.dashed.person"
-        case .supervisor: return "person.badge.shield"
-        case .technician: return "wrench.and.screwdriver"
-        case .engineer: return "gearshape.2"
-        case .safetyOfficer: return "shield.checkered"
-        case .administrator: return "person.badge.key"
-        case .fieldOperator: return "figure.walk"
-        case .dispatcher: return "radio"
-        case .qualityInspector: return "checkmark.seal"
-        }
-    }
-
     var colorHex: String {
         switch self {
         case .manager: return "1E40AF"
@@ -49,12 +35,10 @@ struct Employee: Identifiable, Codable, Hashable {
     var firstName: String
     var lastName: String
     var email: String
-    var phone: String?
     var role: EmployeeRole
     var departmentId: UUID?
     var teamId: UUID?
     var isActive: Bool
-    var joinDate: Date
     var createdAt: Date
     var updatedAt: Date
 
@@ -66,17 +50,15 @@ struct Employee: Identifiable, Codable, Hashable {
         return "\(f)\(l)".uppercased()
     }
 
-    init(firstName: String, lastName: String, email: String, phone: String? = nil, role: EmployeeRole = .technician, departmentId: UUID? = nil, teamId: UUID? = nil) {
+    init(firstName: String, lastName: String, email: String, role: EmployeeRole = .technician, departmentId: UUID? = nil, teamId: UUID? = nil) {
         self.id = UUID()
         self.firstName = firstName
         self.lastName = lastName
         self.email = email
-        self.phone = phone
         self.role = role
         self.departmentId = departmentId
         self.teamId = teamId
         self.isActive = true
-        self.joinDate = Date()
         self.createdAt = Date()
         self.updatedAt = Date()
     }

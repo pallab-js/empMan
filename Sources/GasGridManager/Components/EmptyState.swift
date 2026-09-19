@@ -4,7 +4,6 @@ struct EmptyState: View {
     let icon: String
     let title: String
     var buttonTitle: String? = nil
-    var buttonSystemImage: String? = nil
     var action: (() -> Void)? = nil
 
     var body: some View {
@@ -15,7 +14,7 @@ struct EmptyState: View {
             Text(title).font(.title3)
             if let buttonTitle, let action {
                 Button { action() } label: {
-                    Label(buttonTitle, systemImage: buttonSystemImage ?? "plus")
+                    Label(buttonTitle, systemImage: "plus")
                 }
                 .buttonStyle(.borderedProminent)
                 .padding(.top, 4)

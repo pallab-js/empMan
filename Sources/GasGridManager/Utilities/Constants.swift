@@ -15,7 +15,6 @@ enum Layout {
     static let iconSizeSmall: CGFloat = 15
     static let iconSizeMedium: CGFloat = 20
     static let avatarSizeSmall: CGFloat = 16
-    static let avatarSizeMedium: CGFloat = 28
     static let avatarSizeLarge: CGFloat = 32
     static let avatarSizeXL: CGFloat = 36
     static let avatarSizeXXL: CGFloat = 44

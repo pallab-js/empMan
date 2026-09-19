@@ -3,7 +3,6 @@ import Charts
 
 struct DashboardView: View {
     @EnvironmentObject var store: AppStore
-    @AppStorage("enableAnimations") private var enableAnimations = true
 
     private var stats: DashboardStats {
         DashboardStats(store: store)

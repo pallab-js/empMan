@@ -9,15 +9,6 @@ enum TaskPriority: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    var icon: String {
-        switch self {
-        case .low: return "arrow.down.circle"
-        case .medium: return "equal.circle"
-        case .high: return "arrow.up.circle"
-        case .critical: return "exclamationmark.circle.fill"
-        }
-    }
-
     var colorHex: String {
         switch self {
         case .low: return "059669"
@@ -95,7 +86,6 @@ struct Task: Identifiable, Codable, Hashable {
     var completedAt: Date?
     var assigneeId: UUID?
     var projectId: UUID?
-    var tags: [String]
     var createdAt: Date
     var updatedAt: Date
 
@@ -114,7 +104,6 @@ struct Task: Identifiable, Codable, Hashable {
         self.dueDate = dueDate
         self.assigneeId = assigneeId
         self.projectId = projectId
-        self.tags = []
         self.createdAt = Date()
         self.updatedAt = Date()
         self.completedAt = nil

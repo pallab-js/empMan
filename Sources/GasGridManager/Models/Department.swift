@@ -43,15 +43,6 @@ enum ProjectStatus: String, Codable, CaseIterable, Identifiable, Sendable {
 
     var id: String { rawValue }
 
-    var icon: String {
-        switch self {
-        case .active: return "play.circle.fill"
-        case .onHold: return "pause.circle.fill"
-        case .completed: return "checkmark.circle.fill"
-        case .archived: return "archivebox"
-        }
-    }
-
     var colorHex: String {
         switch self {
         case .active: return "059669"

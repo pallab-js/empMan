@@ -1,4 +1,6 @@
 import SwiftUI
+import AppKit
+import UniformTypeIdentifiers
 
 struct SettingsView: View {
     @EnvironmentObject var store: AppStore
@@ -6,7 +8,8 @@ struct SettingsView: View {
     @AppStorage("compactSidebar") private var compactSidebar = false
     @AppStorage("enableAnimations") private var enableAnimations = true
     @State private var showReset = false
-    @State private var exportSuccess = false
+    @State private var showExportAlert = false
+    @State private var exportMessage = ""
 
     var body: some View {
         ScrollView {
@@ -23,7 +26,7 @@ struct SettingsView: View {
 
                 section("Data") {
                     ToggleRow(title: "Show Active Only", subtitle: "Display only active employees by default", icon: "person.2", isOn: $showActiveOnly)
-                    ButtonRow(title: "Export Data", subtitle: "Export all data to JSON files", icon: "square.and.arrow.up") { exportData() }
+                    ButtonRow(title: "Export Data", subtitle: "Export all data to a JSON file", icon: "square.and.arrow.up") { exportData() }
                     ButtonRow(title: "Reload Sample Data", subtitle: "Reset and reload sample data", icon: "arrow.counterclockwise", destructive: true) { showReset = true }
                 }
 
@@ -56,16 +59,27 @@ struct SettingsView: View {
         } message: {
             Text("This will delete all current data and reload sample data. This cannot be undone.")
         }
-        .alert("Export Complete", isPresented: $exportSuccess) {
+        .alert("Export Data", isPresented: $showExportAlert) {
             Button("OK", role: .cancel) {}
         } message: {
-            Text("Data exported to ~/Library/Application Support/GasGridManager/")
+            Text(exportMessage)
         }
     }
 
     private func exportData() {
-        store.saveAll()
-        exportSuccess = true
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "GasGridManager-export.json"
+        panel.allowedContentTypes = [.json]
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do {
+            let data = try store.exportData()
+            try data.write(to: url, options: .atomic)
+            exportMessage = "Exported to \(url.path)"
+        } catch {
+            exportMessage = "Export failed: \(error.localizedDescription)"
+        }
+        showExportAlert = true
     }
 
     private func section<Content: View>(_ title: String, @ViewBuilder content: () -> Content) -> some View {

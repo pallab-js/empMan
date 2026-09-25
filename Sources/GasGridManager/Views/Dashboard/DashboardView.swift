@@ -140,9 +140,8 @@ struct StatCard: View {
     var invertTrend = false
     @State private var isHovered = false
 
-    private var isPositiveTrend: Bool {
-        invertTrend ? trendValue == 0 : trendValue > 0
-    }
+    private var isZeroTrend: Bool { trendValue == 0 }
+    private var isPositiveTrend: Bool { invertTrend ? trendValue == 0 : trendValue > 0 }
 
     var body: some View {
         VStack(alignment: .leading, spacing: Layout.paddingL) {
@@ -160,9 +159,9 @@ struct StatCard: View {
                 Text(value).font(.system(.largeTitle, design: .rounded).bold())
             }
             HStack(spacing: 4) {
-                Image(systemName: isPositiveTrend ? "arrow.up" : "arrow.down")
+                Image(systemName: isZeroTrend ? "minus" : "arrow.up")
                     .font(.caption2.bold())
-                    .foregroundStyle(isPositiveTrend ? .green : .red)
+                    .foregroundStyle(isZeroTrend ? Color.secondary : (isPositiveTrend ? Color.green : Color.red))
                 Text("\(trendValue) \(trendLabel)")
                     .font(.caption)
                     .foregroundStyle(.tertiary)
@@ -223,7 +222,7 @@ struct WeeklyTrendChart: View {
     @EnvironmentObject var store: AppStore
 
     struct DayData: Identifiable {
-        let id = UUID()
+        var id: Date { date }
         let date: Date
         let created: Int
         let completed: Int

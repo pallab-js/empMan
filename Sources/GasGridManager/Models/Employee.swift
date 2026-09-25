@@ -50,8 +50,8 @@ struct Employee: Identifiable, Codable, Hashable {
         return "\(f)\(l)".uppercased()
     }
 
-    init(firstName: String, lastName: String, email: String, role: EmployeeRole = .technician, departmentId: UUID? = nil, teamId: UUID? = nil) {
-        self.id = UUID()
+    init(id: UUID = UUID(), firstName: String, lastName: String, email: String, role: EmployeeRole = .technician, departmentId: UUID? = nil, teamId: UUID? = nil) {
+        self.id = id
         self.firstName = firstName
         self.lastName = lastName
         self.email = email

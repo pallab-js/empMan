@@ -43,13 +43,17 @@ struct GasGridApp: App {
 
 struct ContentView: View {
     @EnvironmentObject var store: AppStore
+    @AppStorage("compactSidebar") private var compactSidebar = false
     @State private var selectedItem: NavigationItem? = .dashboard
     @State private var columnVisibility: NavigationSplitViewVisibility = .doubleColumn
 
     var body: some View {
         NavigationSplitView(columnVisibility: $columnVisibility) {
             SidebarView(selectedItem: $selectedItem)
-                .navigationSplitViewColumnWidth(min: Layout.sidebarMinWidth, ideal: Layout.sidebarIdealWidth)
+                .navigationSplitViewColumnWidth(
+                    min: compactSidebar ? Layout.sidebarCompactMinWidth : Layout.sidebarMinWidth,
+                    ideal: compactSidebar ? Layout.sidebarCompactIdealWidth : Layout.sidebarIdealWidth
+                )
         } detail: {
             DetailContent(selectedItem: selectedItem)
         }
@@ -74,6 +78,6 @@ struct DetailContent: View {
             }
         }
         .transition(.opacity)
-        .animation(.easeInOut(duration: Layout.animationDuration), value: selectedItem)
+        .animation(AppPreferences.animationsEnabled ? .easeInOut(duration: Layout.animationDuration) : nil, value: selectedItem)
     }
 }

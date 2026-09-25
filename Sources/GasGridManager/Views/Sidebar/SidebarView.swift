@@ -18,8 +18,13 @@ struct SidebarView: View {
                     if item == .settings {
                         Divider().padding(.vertical, 6)
                     }
-                    SidebarRow(item: item, isSelected: selectedItem == item)
-                        .onTapGesture { selectedItem = item }
+                    Button {
+                        selectedItem = item
+                    } label: {
+                        SidebarRow(item: item, isSelected: selectedItem == item)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(selectedItem == item ? .isSelected : [])
                 }
             }
             .padding(.vertical, 6)
@@ -45,6 +50,7 @@ struct SidebarRow: View {
     let isSelected: Bool
     @State private var isHovered = false
     @AppStorage("enableAnimations") private var enableAnimations = true
+    @AppStorage("compactSidebar") private var compactSidebar = false
 
     var body: some View {
         HStack(spacing: 10) {
@@ -57,7 +63,7 @@ struct SidebarRow: View {
                 .foregroundStyle(isSelected ? .primary : .secondary)
             Spacer()
         }
-        .padding(.horizontal, Layout.paddingXL)
+        .padding(.horizontal, compactSidebar ? Layout.paddingM : Layout.paddingXL)
         .padding(.vertical, Layout.paddingS)
         .frame(maxWidth: .infinity, minHeight: 32)
         .contentShape(RoundedRectangle(cornerRadius: Layout.cornerRadiusS))

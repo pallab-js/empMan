@@ -15,5 +15,10 @@ let package = Package(
             name: "GasGridManager",
             path: "Sources/GasGridManager"
         ),
+        .testTarget(
+            name: "GasGridManagerTests",
+            dependencies: ["GasGridManager"],
+            path: "Tests/GasGridManagerTests"
+        ),
     ]
 )

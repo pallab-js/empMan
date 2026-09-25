@@ -106,7 +106,7 @@ struct NewTeamSheet: View {
             SheetHeader(
                 title: "New Team",
                 primaryTitle: "Create",
-                primaryDisabled: name.isEmpty,
+                primaryDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 onDismiss: { dismiss() },
                 onPrimary: { create() }
             )
@@ -117,7 +117,11 @@ struct NewTeamSheet: View {
         }.frame(minWidth: Layout.minSheetWidth, minHeight: Layout.minSheetHeight)
     }
 
-    private func create() { store.addTeam(Team(name: name, departmentId: deptId)); dismiss() }
+    private func create() {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        store.addTeam(Team(name: trimmed, departmentId: deptId))
+        dismiss()
+    }
 }
 
 struct TeamDetailSheet: View {
@@ -141,7 +145,9 @@ struct TeamDetailSheet: View {
                 Spacer()
                 if editMode {
                     Button("Delete", role: .destructive) { showDelete = true }.buttonStyle(.bordered)
-                    Button("Save") { save() }.buttonStyle(.borderedProminent)
+                    Button("Save") { save() }
+                        .buttonStyle(.borderedProminent)
+                        .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                 } else {
                     Button("Edit") { editMode = true }.buttonStyle(.borderedProminent)
                     Button("Done") { dismiss() }.buttonStyle(.bordered)
@@ -170,6 +176,25 @@ struct TeamDetailSheet: View {
                         }
                     }.padding(.horizontal, Layout.paddingXXL).padding(.vertical, 6)
                 }
+                if editMode {
+                    let available = store.employees.filter { $0.isActive && $0.teamId != team.id }
+                    if available.isEmpty {
+                        Text("No employees available to add")
+                            .font(.caption).foregroundStyle(.tertiary)
+                            .padding(.horizontal, Layout.paddingXXL)
+                    } else {
+                        Menu {
+                            ForEach(available) { e in
+                                Button(e.fullName) { var emp = e; emp.teamId = team.id; store.updateEmployee(emp) }
+                            }
+                        } label: {
+                            Label("Add Member", systemImage: "plus")
+                        }
+                        .menuStyle(.borderlessButton)
+                        .fixedSize()
+                        .padding(.horizontal, Layout.paddingXXL)
+                    }
+                }
             }
         }.frame(minWidth: 450, minHeight: Layout.minSheetHeightDetail)
         .alert("Delete Team?", isPresented: $showDelete) {
@@ -179,7 +204,10 @@ struct TeamDetailSheet: View {
     }
 
     private func save() {
-        var t = team; t.name = name; t.departmentId = deptId; store.updateTeam(t)
+        var t = team
+        t.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        t.departmentId = deptId
+        store.updateTeam(t)
         editMode = false
     }
 }

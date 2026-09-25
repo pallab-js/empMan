@@ -109,12 +109,15 @@ struct NewProjectSheet: View {
     @State private var startDate = Date()
     @State private var endDate: Date?
 
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var invalidDateRange: Bool { endDate.map { $0 < startDate } ?? false }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SheetHeader(
                 title: "New Project",
                 primaryTitle: "Create",
-                primaryDisabled: name.isEmpty,
+                primaryDisabled: trimmedName.isEmpty || invalidDateRange,
                 onDismiss: { dismiss() },
                 onPrimary: { create() }
             )
@@ -123,11 +126,15 @@ struct NewProjectSheet: View {
                 StyledTextEditor(text: $desc, placeholder: "Project description...", minHeight: 60)
                 DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
                 OptionalDatePicker(title: "End Date", date: $endDate)
+                if invalidDateRange {
+                    Text("End date must be on or after start date.")
+                        .font(.caption).foregroundStyle(.red)
+                }
             }.padding(Layout.paddingXXL)
         }.frame(minWidth: Layout.minSheetWidthWide, minHeight: Layout.minSheetHeightTall)
     }
 
-    private func create() { store.addProject(Project(name: name, description: desc.isEmpty ? nil : desc, startDate: startDate, endDate: endDate)); dismiss() }
+    private func create() { store.addProject(Project(name: trimmedName, description: desc.isEmpty ? nil : desc, startDate: startDate, endDate: endDate)); dismiss() }
 }
 
 struct ProjectDetailSheet: View {
@@ -151,6 +158,7 @@ struct ProjectDetailSheet: View {
                 showDestructive: true,
                 destructiveTitle: "Delete",
                 onDestructive: { showDelete = true },
+                primaryDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 onDismiss: { dismiss() },
                 onPrimary: { save() }
             )
@@ -186,5 +194,13 @@ struct ProjectDetailSheet: View {
         }
     }
 
-    private func save() { var p = project; p.name = name; p.description = desc.isEmpty ? nil : desc; p.status = status; p.updatedAt = Date(); store.updateProject(p); dismiss() }
+    private func save() {
+        var p = project
+        p.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        p.description = desc.isEmpty ? nil : desc
+        p.status = status
+        p.updatedAt = Date()
+        store.updateProject(p)
+        dismiss()
+    }
 }

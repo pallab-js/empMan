@@ -1,4 +1,13 @@
 import CoreGraphics
+import Foundation
+
+/// Reads user preferences directly so non-@AppStorage call sites (view modifiers,
+/// animations) honor the Settings toggles without prop-drilling.
+enum AppPreferences {
+    static var animationsEnabled: Bool {
+        UserDefaults.standard.object(forKey: "enableAnimations") as? Bool ?? true
+    }
+}
 
 enum Layout {
     static let paddingS: CGFloat = 8
@@ -21,6 +30,8 @@ enum Layout {
 
     static let sidebarMinWidth: CGFloat = 220
     static let sidebarIdealWidth: CGFloat = 240
+    static let sidebarCompactMinWidth: CGFloat = 170
+    static let sidebarCompactIdealWidth: CGFloat = 200
     static let appMinWidth: CGFloat = 1024
     static let appMinHeight: CGFloat = 680
     static let appIdealWidth: CGFloat = 1280

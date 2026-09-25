@@ -18,17 +18,10 @@ final class AppStore: ObservableObject {
     private let fileManager = FileManager.default
     private let encoder = JSONEncoder()
     private let decoder = JSONDecoder()
+    private let storageDirectory: URL
 
-    private lazy var storageURL: URL = {
-        let appSupport = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        let dir = appSupport.appendingPathComponent("GasGridManager", isDirectory: true)
-        do {
-            try fileManager.createDirectory(at: dir, withIntermediateDirectories: true)
-        } catch {
-            logger.error("Failed to create storage directory: \(error.localizedDescription)")
-        }
-        return dir
-    }()
+    /// PII (names, emails) lives here — restrict to the current user only.
+    private static let directoryPermissions: [FileAttributeKey: Any] = [.posixPermissions: 0o700]
 
     // MARK: - Lookup Caches (rebuilt on data changes)
     private var employeeIndex: [UUID: Employee] = [:]
@@ -40,20 +33,32 @@ final class AppStore: ObservableObject {
     private var membersByTeam: [UUID: [Employee]] = [:]
     private var employeesByDepartment: [UUID: [Employee]] = [:]
 
-    private init() {
+    /// - Parameter storageDirectory: override for tests; defaults to
+    ///   `~/Library/Application Support/GasGridManager`.
+    init(storageDirectory: URL? = nil) {
         encoder.dateEncodingStrategy = .iso8601
         decoder.dateDecodingStrategy = .iso8601
+        let dir = storageDirectory
+            ?? fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
+                .appendingPathComponent("GasGridManager", isDirectory: true)
+        self.storageDirectory = dir
+        do {
+            try fileManager.createDirectory(at: dir, withIntermediateDirectories: true, attributes: Self.directoryPermissions)
+            try fileManager.setAttributes(Self.directoryPermissions, ofItemAtPath: dir.path)
+        } catch {
+            logger.error("Failed to prepare storage directory: \(error.localizedDescription)")
+        }
         loadAll()
     }
 
     // MARK: - Persistence
 
     private func save<T: Encodable>(_ items: [T], to filename: String) {
-        let url = storageURL.appendingPathComponent(filename)
+        let url = storageDirectory.appendingPathComponent(filename)
         do {
             let data = try encoder.encode(items)
             try data.write(to: url, options: .atomic)
-            try FileManager.default.setAttributes(
+            try fileManager.setAttributes(
                 [.posixPermissions: 0o600],
                 ofItemAtPath: url.path
             )
@@ -63,13 +68,20 @@ final class AppStore: ObservableObject {
     }
 
     private func load<T: Decodable>(_ type: T.Type, from filename: String) -> [T] {
-        let url = storageURL.appendingPathComponent(filename)
+        let url = storageDirectory.appendingPathComponent(filename)
         do {
             let data = try Data(contentsOf: url)
             let items = try decoder.decode([T].self, from: data)
             return items
         } catch {
             logger.warning("Failed to load \(filename): \(error.localizedDescription)")
+            // Preserve undecodable data so a bad file never silently erases user records.
+            if fileManager.fileExists(atPath: url.path) {
+                let backup = url.appendingPathExtension("invalid")
+                try? fileManager.removeItem(at: backup)
+                try? fileManager.copyItem(at: url, to: backup)
+                logger.warning("Backed up undecodable \(filename) to \(backup.lastPathComponent)")
+            }
             return []
         }
     }
@@ -91,6 +103,20 @@ final class AppStore: ObservableObject {
         save(projects, to: "projects.json")
     }
 
+    /// Single-file export of every collection, for saving to a user-chosen location.
+    func exportData() throws -> Data {
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        return try encoder.encode(ExportBundle(
+            departments: departments,
+            teams: teams,
+            employees: employees,
+            tasks: tasks,
+            projects: projects
+        ))
+    }
+
     // MARK: - Reset
 
     func resetToSampleData() {
@@ -106,10 +132,11 @@ final class AppStore: ObservableObject {
     // MARK: - Index Management
 
     private func rebuildIndices() {
-        employeeIndex = Dictionary(uniqueKeysWithValues: employees.map { ($0.id, $0) })
-        departmentIndex = Dictionary(uniqueKeysWithValues: departments.map { ($0.id, $0) })
-        teamIndex = Dictionary(uniqueKeysWithValues: teams.map { ($0.id, $0) })
-        projectIndex = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, $0) })
+        // uniquingKeysWith: a hand-edited/corrupt file with duplicate IDs must not crash on launch.
+        employeeIndex = Dictionary(employees.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        departmentIndex = Dictionary(departments.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        teamIndex = Dictionary(teams.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        projectIndex = Dictionary(projects.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
 
         tasksByAssignee = [:]
         for task in tasks {
@@ -285,7 +312,9 @@ final class AppStore: ObservableObject {
     // MARK: - Sample Data
 
     func loadSampleData() {
-        guard employees.isEmpty else { return }
+        // Only seed into a truly empty store — otherwise a user who deletes all
+        // employees would get their departments/teams replaced by duplicates.
+        guard employees.isEmpty, tasks.isEmpty, departments.isEmpty, teams.isEmpty, projects.isEmpty else { return }
 
         let deptData: [(name: String, desc: String, color: String)] = [
             ("Operations", "Pipeline management and gas distribution operations", "059669"),
@@ -327,6 +356,15 @@ final class AppStore: ObservableObject {
             return e
         }
 
+        // Projects must exist before tasks — task rows reference them by index.
+        let projData: [(name: String, desc: String)] = [
+            ("Pipeline Extension 2025", "Extend gas pipeline network to new industrial zone"),
+            ("Safety Upgrade Initiative", "Upgrade safety systems across all facilities"),
+            ("Customer Portal Development", "Develop online customer self-service portal"),
+            ("Maintenance Automation", "Implement automated maintenance scheduling")
+        ]
+        projects = projData.map { Project(name: $0.name, description: $0.desc) }
+
         let taskData: [(title: String, priority: TaskPriority, status: TaskStatus, category: TaskCategory, empIdx: Int, projIdx: Int?)] = [
             ("Pipeline Inspection - Zone A", .high, .inProgress, .pipelineInspection, 0, 0),
             ("Equipment Maintenance - Compressor Station", .critical, .todo, .equipmentMaintenance, 2, 3),
@@ -349,17 +387,18 @@ final class AppStore: ObservableObject {
             return t
         }
 
-        let projData: [(name: String, desc: String)] = [
-            ("Pipeline Extension 2025", "Extend gas pipeline network to new industrial zone"),
-            ("Safety Upgrade Initiative", "Upgrade safety systems across all facilities"),
-            ("Customer Portal Development", "Develop online customer self-service portal"),
-            ("Maintenance Automation", "Implement automated maintenance scheduling")
-        ]
-        projects = projData.map { Project(name: $0.name, description: $0.desc) }
-
         rebuildIndices()
         saveAll()
     }
+}
+
+// MARK: - Export Bundle
+struct ExportBundle: Codable {
+    let departments: [Department]
+    let teams: [Team]
+    let employees: [Employee]
+    let tasks: [Task]
+    let projects: [Project]
 }
 
 // MARK: - Safe Array Subscript

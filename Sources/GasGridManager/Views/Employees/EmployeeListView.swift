@@ -128,23 +128,43 @@ struct NewEmployeeSheet: View {
     @State private var email = ""
     @State private var role: EmployeeRole = .technician
     @State private var deptId: UUID?
+    @State private var teamId: UUID?
+
+    /// Teams of the selected department (plus unassigned teams) — keeps assignments consistent.
+    private var assignableTeams: [Team] {
+        store.teams.filter { deptId == nil || $0.departmentId == deptId || $0.id == teamId }
+    }
+
+    private var emailError: String? {
+        Validators.emailValidationError(email, existing: store.employees)
+    }
+
+    private var nameBlank: Bool {
+        first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        last.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SheetHeader(
                 title: "Add Employee",
                 primaryTitle: "Add",
-                primaryDisabled: first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || last.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || !Validators.isValidEmail(email),
+                primaryDisabled: nameBlank || emailError != nil || !Validators.isValidEmail(email),
                 onDismiss: { dismiss() },
                 onPrimary: { add() }
             )
             Form {
                 HStack { TextField("First Name", text: $first); TextField("Last Name", text: $last) }
                 TextField("Email", text: $email)
+                if let emailError {
+                    Text(emailError).font(.caption).foregroundStyle(.red)
+                }
                 Picker("Role", selection: $role) { ForEach(EmployeeRole.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Department", selection: $deptId) { Text("Unassigned").tag(nil as UUID?); ForEach(store.departments) { Text($0.name).tag($0.id as UUID?) } }
+                Picker("Team", selection: $teamId) {
+                    Text("Unassigned").tag(nil as UUID?)
+                    ForEach(assignableTeams) { Text($0.name).tag($0.id as UUID?) }
+                }
             }.padding(Layout.paddingXXL)
         }.frame(minWidth: Layout.minSheetWidthWide, minHeight: Layout.minSheetHeightMed)
     }
@@ -153,7 +173,7 @@ struct NewEmployeeSheet: View {
         let e = Employee(firstName: first.trimmingCharacters(in: .whitespacesAndNewlines),
                          lastName: last.trimmingCharacters(in: .whitespacesAndNewlines),
                          email: email.trimmingCharacters(in: .whitespacesAndNewlines),
-                         role: role, departmentId: deptId)
+                         role: role, departmentId: deptId, teamId: teamId)
         store.addEmployee(e)
         dismiss()
     }
@@ -168,6 +188,7 @@ struct EditEmployeeSheet: View {
     @State private var email: String
     @State private var role: EmployeeRole
     @State private var deptId: UUID?
+    @State private var teamId: UUID?
     @State private var isActive: Bool
     @State private var showDelete = false
 
@@ -178,7 +199,21 @@ struct EditEmployeeSheet: View {
         _email = State(initialValue: employee.email)
         _role = State(initialValue: employee.role)
         _deptId = State(initialValue: employee.departmentId)
+        _teamId = State(initialValue: employee.teamId)
         _isActive = State(initialValue: employee.isActive)
+    }
+
+    private var assignableTeams: [Team] {
+        store.teams.filter { deptId == nil || $0.departmentId == deptId || $0.id == teamId }
+    }
+
+    private var emailError: String? {
+        Validators.emailValidationError(email, existing: store.employees, excluding: employee.id)
+    }
+
+    private var nameBlank: Bool {
+        first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        last.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
@@ -188,17 +223,22 @@ struct EditEmployeeSheet: View {
                 showDestructive: true,
                 destructiveTitle: "Delete",
                 onDestructive: { showDelete = true },
-                primaryDisabled: first.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || last.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                    || !Validators.isValidEmail(email),
+                primaryDisabled: nameBlank || emailError != nil || !Validators.isValidEmail(email),
                 onDismiss: { dismiss() },
                 onPrimary: { save() }
             )
             Form {
                 HStack { TextField("First Name", text: $first); TextField("Last Name", text: $last) }
                 TextField("Email", text: $email)
+                if let emailError {
+                    Text(emailError).font(.caption).foregroundStyle(.red)
+                }
                 Picker("Role", selection: $role) { ForEach(EmployeeRole.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Department", selection: $deptId) { Text("Unassigned").tag(nil as UUID?); ForEach(store.departments) { Text($0.name).tag($0.id as UUID?) } }
+                Picker("Team", selection: $teamId) {
+                    Text("Unassigned").tag(nil as UUID?)
+                    ForEach(assignableTeams) { Text($0.name).tag($0.id as UUID?) }
+                }
                 Toggle("Active", isOn: $isActive)
             }.padding(Layout.paddingXXL)
         }.frame(minWidth: Layout.minSheetWidthWide, minHeight: Layout.minSheetHeightTall)
@@ -213,7 +253,7 @@ struct EditEmployeeSheet: View {
         e.firstName = first.trimmingCharacters(in: .whitespacesAndNewlines)
         e.lastName = last.trimmingCharacters(in: .whitespacesAndNewlines)
         e.email = email.trimmingCharacters(in: .whitespacesAndNewlines)
-        e.role = role; e.departmentId = deptId; e.isActive = isActive; e.updatedAt = Date()
+        e.role = role; e.departmentId = deptId; e.teamId = teamId; e.isActive = isActive; e.updatedAt = Date()
         store.updateEmployee(e)
         dismiss()
     }

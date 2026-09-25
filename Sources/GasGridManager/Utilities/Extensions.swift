@@ -79,7 +79,7 @@ struct CardModifier: ViewModifier {
                 y: isHovered ? hoveredShadowY : restingShadowY
             )
             .scaleEffect(isHovered ? scaleOnHover : 1.0)
-            .animation(.easeInOut(duration: Layout.animationDuration), value: isHovered)
+            .animation(AppPreferences.animationsEnabled ? .easeInOut(duration: Layout.animationDuration) : nil, value: isHovered)
     }
 }
 

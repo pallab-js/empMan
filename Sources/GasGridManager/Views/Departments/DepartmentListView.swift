@@ -131,12 +131,14 @@ struct NewDepartmentSheet: View {
 
     private let colorOptions = ["059669", "0284C7", "DC2626", "7C3AED", "D97706", "64748B", "1E40AF", "0891B2", "C2410C"]
 
+    private var trimmedName: String { name.trimmingCharacters(in: .whitespacesAndNewlines) }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SheetHeader(
                 title: "New Department",
                 primaryTitle: "Create",
-                primaryDisabled: name.isEmpty,
+                primaryDisabled: trimmedName.isEmpty,
                 onDismiss: { dismiss() },
                 onPrimary: { create() }
             )
@@ -161,7 +163,7 @@ struct NewDepartmentSheet: View {
     }
 
     private func create() {
-        store.addDepartment(Department(name: name, description: desc.isEmpty ? nil : desc, colorHex: colorHex))
+        store.addDepartment(Department(name: trimmedName, description: desc.isEmpty ? nil : desc, colorHex: colorHex))
         dismiss()
     }
 }
@@ -191,6 +193,7 @@ struct EditDepartmentSheet: View {
                 showDestructive: true,
                 destructiveTitle: "Delete",
                 onDestructive: { showDelete = true },
+                primaryDisabled: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
                 onDismiss: { dismiss() },
                 onPrimary: { save() }
             )
@@ -219,7 +222,7 @@ struct EditDepartmentSheet: View {
 
     private func save() {
         var d = department
-        d.name = name
+        d.name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         d.description = desc.isEmpty ? nil : desc
         d.colorHex = colorHex
         d.updatedAt = Date()

@@ -10,9 +10,13 @@ struct TaskListView: View {
 
     private var filtered: [Task] {
         store.tasks.filter { t in
-            (searchText.isEmpty || t.title.localizedCaseInsensitiveContains(searchText)) &&
-            (statusFilter == nil || t.status == statusFilter) &&
-            (priorityFilter == nil || t.priority == priorityFilter)
+            let matchesSearch = searchText.isEmpty
+                || t.title.localizedCaseInsensitiveContains(searchText)
+                || t.description?.localizedCaseInsensitiveContains(searchText) == true
+                || store.employee(for: t.assigneeId)?.fullName.localizedCaseInsensitiveContains(searchText) == true
+            return matchesSearch &&
+                (statusFilter == nil || t.status == statusFilter) &&
+                (priorityFilter == nil || t.priority == priorityFilter)
         }.sorted { $0.createdAt > $1.createdAt }
     }
 
@@ -123,7 +127,7 @@ struct TaskRow: View {
             .clipShape(RoundedRectangle(cornerRadius: Layout.cornerRadiusM))
             .shadow(color: .black.opacity(isHovered ? 0.1 : 0.04), radius: isHovered ? 6 : 2, y: isHovered ? 3 : 1)
             .scaleEffect(isHovered ? 1.005 : 1.0)
-            .animation(.easeInOut(duration: Layout.hoverAnimationDuration), value: isHovered)
+            .animation(AppPreferences.animationsEnabled ? .easeInOut(duration: Layout.hoverAnimationDuration) : nil, value: isHovered)
         }.buttonStyle(.plain).onHover { isHovered = $0 }
     }
 }
@@ -135,15 +139,18 @@ struct NewTaskSheet: View {
     @State private var description = ""
     @State private var priority: TaskPriority = .medium
     @State private var category: TaskCategory = .projectWork
-    @State private var dueDate = Date()
+    @State private var dueDate: Date?
     @State private var assigneeId: UUID?
+    @State private var projectId: UUID?
+
+    private var trimmedTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             SheetHeader(
                 title: "New Task",
                 primaryTitle: "Create",
-                primaryDisabled: title.isEmpty,
+                primaryDisabled: trimmedTitle.isEmpty,
                 onDismiss: { dismiss() },
                 onPrimary: { create() }
             )
@@ -152,17 +159,21 @@ struct NewTaskSheet: View {
                 StyledTextEditor(text: $description, placeholder: "Task description...")
                 Picker("Priority", selection: $priority) { ForEach(TaskPriority.allCases) { Text($0.rawValue).tag($0) } }
                 Picker("Category", selection: $category) { ForEach(TaskCategory.allCases) { Text($0.rawValue).tag($0) } }
-                DatePicker("Due Date", selection: $dueDate, displayedComponents: .date)
+                OptionalDatePicker(title: "Due Date", date: $dueDate)
                 Picker("Assign To", selection: $assigneeId) {
                     Text("Unassigned").tag(nil as UUID?)
                     ForEach(store.employees.filter(\.isActive)) { Text($0.fullName).tag($0.id as UUID?) }
+                }
+                Picker("Project", selection: $projectId) {
+                    Text("No Project").tag(nil as UUID?)
+                    ForEach(store.projects) { Text($0.name).tag($0.id as UUID?) }
                 }
             }.padding(Layout.paddingXXL)
         }.frame(minWidth: Layout.minSheetWidthWide, minHeight: Layout.minSheetHeightDetail)
     }
 
     private func create() {
-        let task = Task(title: title, description: description.isEmpty ? nil : description, priority: priority, category: category, dueDate: dueDate, assigneeId: assigneeId)
+        let task = Task(title: trimmedTitle, description: description.isEmpty ? nil : description, priority: priority, category: category, dueDate: dueDate, assigneeId: assigneeId, projectId: projectId)
         store.addTask(task)
         dismiss()
     }
@@ -179,6 +190,7 @@ struct EditTaskSheet: View {
     @State private var category: TaskCategory
     @State private var dueDate: Date?
     @State private var assigneeId: UUID?
+    @State private var projectId: UUID?
     @State private var showDelete = false
 
     init(task: Task) {
@@ -190,7 +202,10 @@ struct EditTaskSheet: View {
         _category = State(initialValue: task.category)
         _dueDate = State(initialValue: task.dueDate)
         _assigneeId = State(initialValue: task.assigneeId)
+        _projectId = State(initialValue: task.projectId)
     }
+
+    private var trimmedTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
@@ -199,6 +214,7 @@ struct EditTaskSheet: View {
                 showDestructive: true,
                 destructiveTitle: "Delete",
                 onDestructive: { showDelete = true },
+                primaryDisabled: trimmedTitle.isEmpty,
                 onDismiss: { dismiss() },
                 onPrimary: { save() }
             )
@@ -213,6 +229,10 @@ struct EditTaskSheet: View {
                     Text("Unassigned").tag(nil as UUID?)
                     ForEach(store.employees.filter(\.isActive)) { Text($0.fullName).tag($0.id as UUID?) }
                 }
+                Picker("Project", selection: $projectId) {
+                    Text("No Project").tag(nil as UUID?)
+                    ForEach(store.projects) { Text($0.name).tag($0.id as UUID?) }
+                }
             }.padding(Layout.paddingXXL)
         }
         .frame(minWidth: Layout.minSheetWidthWide, minHeight: Layout.minSheetHeightDetail)
@@ -224,13 +244,14 @@ struct EditTaskSheet: View {
 
     private func save() {
         var updated = task
-        updated.title = title
+        updated.title = trimmedTitle
         updated.description = description.isEmpty ? nil : description
         updated.priority = priority
         updated.status = status
         updated.category = category
         updated.dueDate = dueDate
         updated.assigneeId = assigneeId
+        updated.projectId = projectId
         updated.updatedAt = Date()
         if status == .done && updated.completedAt == nil {
             updated.completedAt = Date()
